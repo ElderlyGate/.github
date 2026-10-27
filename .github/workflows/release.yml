@@ -1,0 +1,156 @@
+name: release
+
+# V-7: a merge to main releases. Called by each product after its tests pass.
+on:
+  workflow_call:
+    inputs:
+      build:
+        description: "What makes the release: goreleaser, script or none (tag and notes only)."
+        type: string
+        default: none
+      script:
+        description: "The command for build: script. It runs after the tag is pushed, with TAG set."
+        type: string
+        default: ""
+      version-file:
+        description: "A file that repeats the version (V-6). The release stops when it differs."
+        type: string
+        default: ""
+      go-version-file:
+        description: "The go.mod that sets the Go version for goreleaser."
+        type: string
+        default: go.mod
+      node-version:
+        description: "A Node version to set up before the build, when the build needs one."
+        type: string
+        default: ""
+      rc:
+        description: "Make a release candidate vX.Y.Z-rc.N instead of a release (V-8)."
+        type: boolean
+        default: false
+    outputs:
+      version:
+        description: "The tag that was released, or empty."
+        value: ${{ jobs.release.outputs.version }}
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    # Tags live on main only (V-1); "[skip release]" in the merge commit holds the release back.
+    if: github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip release]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # Merges release one after another, so two runs never pick the same version.
+    concurrency:
+      group: release-${{ github.repository }}
+      cancel-in-progress: false
+    outputs:
+      version: ${{ steps.plan.outputs.tag }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BUILD: ${{ inputs.build }}
+      RC: ${{ inputs.rc }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - id: next
+        uses: ElderlyGate/.github/.github/actions/next-version@main
+        with:
+          rc: ${{ inputs.rc }}
+
+      - id: plan
+        env:
+          VERSION: ${{ steps.next.outputs.version }}
+          SCRIPT: ${{ inputs.script }}
+        run: |
+          case "$BUILD" in
+            goreleaser | none) ;;
+            script) [ -n "$SCRIPT" ] || { echo "build: script needs a script input" >&2; exit 1; } ;;
+            *) echo "build must be goreleaser, script or none, not '$BUILD'" >&2; exit 1 ;;
+          esac
+          if [ -z "$VERSION" ]; then
+            echo "No feat, fix, perf, revert or breaking change since the last release: nothing to release."
+            exit 0
+          fi
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "$VERSION is already released."
+            exit 0
+          fi
+          echo "Releasing $VERSION."
+          echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
+
+      # V-6: the file must already say the new version; the pipeline never commits to main.
+      - name: version file equals the tag
+        if: steps.plan.outputs.tag != '' && inputs.version-file != ''
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+          FILE: ${{ inputs.version-file }}
+        run: |
+          have=$(tr -d '[:space:]' < "$FILE")
+          want="${TAG#v}"
+          # A release candidate may also carry the version it is a candidate for.
+          if [ "$have" != "$want" ] && [ "$have" != "${want%%-rc.*}" ]; then
+            echo "::error file=$FILE::$FILE says $have, but this merge releases $TAG. Merge a pull request 'chore: set $FILE to ${want%%-rc.*}' and the release follows it." >&2
+            exit 1
+          fi
+
+      - if: steps.plan.outputs.tag != '' && inputs.build == 'goreleaser'
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+
+      - if: steps.plan.outputs.tag != '' && inputs.node-version != ''
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      # V-2: one annotated tag; a run again finds it on HEAD and goes on from there.
+      - name: tag
+        if: steps.plan.outputs.tag != ''
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+        run: |
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            if [ "$(git rev-list -n1 "$TAG")" != "$(git rev-parse HEAD)" ]; then
+              echo "$TAG already exists on another commit" >&2
+              exit 1
+            fi
+            echo "$TAG is already on this commit."
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            tag -a "$TAG" -m "$TAG"
+          git push origin "refs/tags/$TAG"
+
+      # goreleaser publishes the release itself; prerelease: auto in .goreleaser.yaml marks an rc.
+      - if: steps.plan.outputs.tag != '' && inputs.build == 'goreleaser'
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          args: release --clean --release-notes ${{ steps.next.outputs.notes }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GORELEASER_CURRENT_TAG: ${{ steps.plan.outputs.tag }}
+
+      - name: script
+        if: steps.plan.outputs.tag != '' && inputs.build == 'script'
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+          SCRIPT: ${{ inputs.script }}
+        run: eval "$SCRIPT"
+
+      # V-8: a candidate is a pre-release, so it is never the latest.
+      - name: publish
+        if: steps.plan.outputs.tag != '' && inputs.build != 'goreleaser'
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+          NOTES: ${{ steps.next.outputs.notes }}
+        run: |
+          args=(--verify-tag --title "$TAG" --notes-file "$NOTES")
+          if [ "$RC" = true ]; then args+=(--prerelease); fi
+          gh release create "$TAG" "${args[@]}"

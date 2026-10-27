@@ -1,0 +1,25 @@
+# Copy to .github/workflows/release.yml in a docs-only repository, like the org constitution.
+name: release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      rc:
+        description: Make a release candidate vX.Y.Z-rc.N
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Nothing to test: the release is the tag and its notes.
+  release:
+    permissions:
+      contents: write
+    uses: ElderlyGate/.github/.github/workflows/release.yml@main
+    with:
+      build: none
+      rc: ${{ inputs.rc == true }}

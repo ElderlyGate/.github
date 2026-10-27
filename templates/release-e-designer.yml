@@ -1,0 +1,31 @@
+# Copy to .github/workflows/release.yml in e-designer: its gate is pnpm check, and VERSION repeats the tag.
+name: release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      rc:
+        description: Make a release candidate vX.Y.Z-rc.N
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  # ci.yml runs pnpm check; a red check means no release.
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: ci
+    permissions:
+      contents: write
+    uses: ElderlyGate/.github/.github/workflows/release.yml@main
+    with:
+      build: none
+      # Drop this line together with the VERSION file (see the README, V-6).
+      version-file: VERSION
+      rc: ${{ inputs.rc == true }}
