@@ -1,0 +1,31 @@
+name: next-version
+description: The tag HEAD releases as (V-3), and its release notes.
+
+inputs:
+  rc:
+    description: Make a release candidate vX.Y.Z-rc.N instead of a release.
+    default: "false"
+
+outputs:
+  version:
+    description: The tag to release, or empty when no release is due.
+    value: ${{ steps.next.outputs.version }}
+  notes:
+    description: Path of the release notes file.
+    value: ${{ steps.next.outputs.notes }}
+
+runs:
+  using: composite
+  steps:
+    # The action is downloaded with its whole repository, so the script sits two folders up.
+    - id: next
+      shell: bash
+      env:
+        RC: ${{ inputs.rc }}
+        SCRIPT: ${{ github.action_path }}/../../scripts/next-version.sh
+      run: |
+        flag=
+        if [ "$RC" = true ]; then flag=--rc; fi
+        echo "version=$(bash "$SCRIPT" $flag)" >> "$GITHUB_OUTPUT"
+        bash "$SCRIPT" --notes > "$RUNNER_TEMP/release-notes.md"
+        echo "notes=$RUNNER_TEMP/release-notes.md" >> "$GITHUB_OUTPUT"

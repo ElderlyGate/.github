@@ -1,0 +1,29 @@
+# Copy to .github/workflows/release.yml in a library: a release is a tag and its notes, no binaries.
+name: release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      rc:
+        description: Make a release candidate vX.Y.Z-rc.N
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  # The product's own ci.yml (it needs the workflow_call trigger); a red test means no release.
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: ci
+    permissions:
+      contents: write
+    uses: ElderlyGate/.github/.github/workflows/release.yml@main
+    with:
+      build: none
+      rc: ${{ inputs.rc == true }}
