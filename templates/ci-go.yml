@@ -8,11 +8,22 @@ on:
 permissions:
   contents: read
 
+env:
+  GOPRIVATE: github.com/ElderlyGate/*
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      # The org's private Go modules are read over HTTPS with GO_PRIVATE_TOKEN, when it is set.
+      - name: private Go modules
+        env:
+          GO_PRIVATE_TOKEN: ${{ secrets.GO_PRIVATE_TOKEN }}
+        run: |
+          if [ -n "$GO_PRIVATE_TOKEN" ]; then
+            git config --global url."https://x-access-token:${GO_PRIVATE_TOKEN}@github.com/ElderlyGate/".insteadOf "https://github.com/ElderlyGate/"
+          fi
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod

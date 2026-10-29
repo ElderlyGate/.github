@@ -28,6 +28,10 @@ on:
         description: "Make a release candidate vX.Y.Z-rc.N instead of a release (V-8)."
         type: boolean
         default: false
+    secrets:
+      GO_PRIVATE_TOKEN:
+        description: "Read-only token for the org's private Go modules (ui-kit, mankit). Pass it with secrets: inherit."
+        required: false
     outputs:
       version:
         description: "The tag that was released, or empty."
@@ -51,12 +55,21 @@ jobs:
       version: ${{ steps.plan.outputs.tag }}
     env:
       GH_TOKEN: ${{ github.token }}
+      GOPRIVATE: github.com/ElderlyGate/*
       BUILD: ${{ inputs.build }}
       RC: ${{ inputs.rc }}
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      # The org's private Go modules are read over HTTPS with GO_PRIVATE_TOKEN, when the caller passes it.
+      - name: private Go modules
+        env:
+          GO_PRIVATE_TOKEN: ${{ secrets.GO_PRIVATE_TOKEN }}
+        run: |
+          if [ -n "$GO_PRIVATE_TOKEN" ]; then
+            git config --global url."https://x-access-token:${GO_PRIVATE_TOKEN}@github.com/ElderlyGate/".insteadOf "https://github.com/ElderlyGate/"
+          fi
 
       - id: next
         uses: ElderlyGate/.github/.github/actions/next-version@main

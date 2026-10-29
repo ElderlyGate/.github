@@ -44,6 +44,8 @@ The script is `.github/scripts/next-version.sh`. Test it with `bash .github/scri
 | `node-version` | | A Node version to set up before the build (kanban-app's goreleaser builds the UI) |
 | `rc` | `false` | Make a release candidate `vX.Y.Z-rc.N` instead |
 
+Secret: `GO_PRIVATE_TOKEN`, optional. A read-only token (Contents: read) for the org's private Go modules, such as ui-kit and mankit; it is an org secret, passed with `secrets: inherit`. With it, `go` and goreleaser fetch `github.com/ElderlyGate/*` over HTTPS (`GOPRIVATE` is set). Without it, a product that imports a private module fails to build.
+
 Output: `version`, the tag that was released, or empty.
 
 ## The version file (V-6)
@@ -57,6 +59,7 @@ Until a product has dropped its file, set `version-file`. Then the pull request 
 1. Copy the template that fits into `.github/workflows/release.yml`, replacing the tag-triggered one.
 2. Give `ci.yml` the `workflow_call` trigger and remove its `push: main` trigger, since `release.yml` now runs it on `main`.
 3. A goreleaser product sets `release: prerelease: auto` in `.goreleaser.yaml`, so an rc is a pre-release (V-8).
+4. A product that imports the org's private Go modules passes `secrets: inherit` to both jobs (the templates do) and gives its `ci.yml` the "private Go modules" step from `templates/ci-go.yml`.
 
 | Template | For |
 |---|---|
