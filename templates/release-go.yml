@@ -18,12 +18,14 @@ jobs:
   # The product's own ci.yml (it needs the workflow_call trigger); a red test means no release.
   ci:
     uses: ./.github/workflows/ci.yml
+    secrets: inherit
 
   release:
     needs: ci
     permissions:
       contents: write
     uses: ElderlyGate/.github/.github/workflows/release.yml@main
+    secrets: inherit
     with:
       build: goreleaser
       rc: ${{ inputs.rc == true }}
