@@ -73,7 +73,7 @@ func Check(base Files, baseDay string, head Files, today string) []string {
 		}
 		switch {
 		case old.Text == cur.Text:
-			if old.Added != "" && cur.Changed != old.Changed {
+			if old.Added != "" && changedDate(cur.Rule) != changedDate(old.Rule) {
 				problems = append(problems, fmt.Sprintf("%s: %s kept its text, so its dates stay `%s`", where, id, datesOf(old.Rule)))
 			}
 		case old.Text == Removed && !old.Override:
@@ -86,9 +86,12 @@ func Check(base Files, baseDay string, head Files, today string) []string {
 }
 
 // changeDated says whether cur, whose text differs from old, carries the day of that change:
-// today, or a day later than old's last date.
+// today, or a day later than old's last date. With OmitSameDayChanged, a rule added today needs no changed date.
 func changeDated(old, cur Rule, today string) bool {
 	last := cur.Changed
+	if last == "" && OmitSameDayChanged && cur.Added == today {
+		last = today
+	}
 	since := old.Changed
 	if since == "" {
 		since = old.Added
@@ -98,8 +101,8 @@ func changeDated(old, cur Rule, today string) bool {
 
 // datesOf is how r's dates read on its line.
 func datesOf(r Rule) string {
-	if r.Changed != "" {
-		return r.Added + " · changed " + r.Changed
+	if c := changedDate(r); c != "" {
+		return r.Added + " · changed " + c
 	}
 	return r.Added
 }
@@ -127,6 +130,9 @@ func checkDates(path string, r Rule, today string) []string {
 	}
 	if r.Changed != "" && r.Changed < r.Added {
 		problems = append(problems, fmt.Sprintf("%s: %s was changed %s, before it was added %s", where, r.ID, r.Changed, r.Added))
+	}
+	if OmitSameDayChanged && r.Changed != "" && r.Changed == r.Added {
+		problems = append(problems, fmt.Sprintf("%s: %s was changed the day it was added; leave changed out: `- **%s** %s · <text>`", where, r.ID, r.ID, r.Added))
 	}
 	return problems
 }

@@ -8,6 +8,10 @@ import (
 // Removed is the whole text of a rule that no longer holds; its ID stays listed.
 const Removed = "Removed."
 
+// OmitSameDayChanged is the owner's choice for a rule changed on the day it was added:
+// true writes and expects the added date only; false writes and expects `changed` on that same day too.
+const OmitSameDayChanged = true
+
 var (
 	ruleLine = regexp.MustCompile(`^- \*\*([A-Z]+(?:-[A-Z]+)*-[0-9]+)\*\*(?: (.*))?$`)
 	datesPre = regexp.MustCompile(`^([0-9]{4}-[0-9]{2}-[0-9]{2})(?: · changed ([0-9]{4}-[0-9]{2}-[0-9]{2}))? · (.*)$`)
@@ -82,14 +86,23 @@ func normalize(text string) string {
 	return strings.TrimSpace(strings.Join(lines, "\n"))
 }
 
-// DatedLine is the bullet line of r carrying the given dates; changed is left out when empty.
+// changedDate is the changed date r stands for: none when it only repeats the added date and that is left out.
+func changedDate(r Rule) string {
+	if OmitSameDayChanged && r.Changed == r.Added {
+		return ""
+	}
+	return r.Changed
+}
+
+// DatedLine is the bullet line of r carrying the given dates; changed is left out when empty,
+// and when it is the added day and OmitSameDayChanged holds.
 func DatedLine(r Rule, firstLine, added, changed string) string {
 	_, words, _ := strings.Cut(firstLine, "** ")
 	if dm := datesPre.FindStringSubmatch(words); dm != nil {
 		words = dm[3]
 	}
 	dates := added
-	if changed != "" {
+	if changed = changedDate(Rule{Added: added, Changed: changed}); changed != "" {
 		dates += " · changed " + changed
 	}
 	return "- **" + r.ID + "** " + dates + " · " + words

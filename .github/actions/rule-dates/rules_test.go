@@ -45,3 +45,10 @@ func TestDatedLineReplacesOldDatesAndLeavesChangedOutWhenEmpty(t *testing.T) {
 		t.Errorf("both dates = %q", got)
 	}
 }
+
+func TestDatedLineLeavesOutAChangeOnTheDayOfAdding(t *testing.T) {
+	r := Rule{ID: "V-1"}
+	if got := DatedLine(r, "- **V-1** A version is a tag.", "2026-10-27", "2026-10-27"); got != "- **V-1** 2026-10-27 · A version is a tag." {
+		t.Errorf("same day = %q", got)
+	}
+}

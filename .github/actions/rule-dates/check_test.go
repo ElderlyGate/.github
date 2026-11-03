@@ -104,3 +104,13 @@ func TestCheckFailsANewRuleDatedBeforeTheBase(t *testing.T) {
 	expectProblems(t, Check(base, "2026-11-01", head, today),
 		"constitution/tech-stack.md:2: V-2 is new but dated 2026-10-30, before the base's last commit on 2026-11-01")
 }
+
+func TestCheckLeavesChangedOutOnTheDayARuleWasAdded(t *testing.T) {
+	base := file("- **V-1** 2026-11-03 · Old words.")
+	expectProblems(t, Check(base, "", file("- **V-1** 2026-11-03 · New words."), today))
+	expectProblems(t, Check(base, "", file("- **V-1** 2026-11-03 · changed 2026-11-03 · New words."), today),
+		"V-1 was changed the day it was added; leave changed out")
+	// A line written the other way before: dropping its same-day changed date is no change.
+	old := file("- **V-2** 2026-10-27 · changed 2026-10-27 · Words.")
+	expectProblems(t, Check(old, "", file("- **V-2** 2026-10-27 · Words."), today))
+}

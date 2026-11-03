@@ -48,12 +48,15 @@ func TestLearnNotesWhatLooksOdd(t *testing.T) {
 }
 
 func TestApplyDatesKnownRulesAndReportsTheRest(t *testing.T) {
-	files := file("# Rules", "- **V-1** Words.", "- **V-9** New.")
-	out, edits, unknown := Apply(files, map[string]Dates{"V-1": {Added: "2026-10-27", Changed: "2026-10-28"}})
-	if got := out["constitution/tech-stack.md"]; got != "# Rules\n- **V-1** 2026-10-27 · changed 2026-10-28 · Words.\n- **V-9** New.\n" {
+	files := file("# Rules", "- **V-1** Words.", "- **V-9** New.", "- **V-2** Same day.")
+	out, edits, unknown := Apply(files, map[string]Dates{
+		"V-1": {Added: "2026-10-27", Changed: "2026-10-28"},
+		"V-2": {Added: "2026-10-27", Changed: "2026-10-27"},
+	})
+	if got := out["constitution/tech-stack.md"]; got != "# Rules\n- **V-1** 2026-10-27 · changed 2026-10-28 · Words.\n- **V-9** New.\n- **V-2** 2026-10-27 · Same day.\n" {
 		t.Errorf("file = %q", got)
 	}
-	if len(edits) != 1 || edits[0].Line != 2 {
+	if len(edits) != 2 || edits[0].Line != 2 {
 		t.Errorf("edits = %+v", edits)
 	}
 	expectProblems(t, unknown, "constitution/tech-stack.md:3: V-9 has no history")
