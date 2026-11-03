@@ -1,6 +1,6 @@
 # ElderlyGate/.github
 
-The org's shared release pipeline. A merge to `main` releases by itself (V-7): nobody tags by hand.
+The org's shared workflows: the release pipeline, and the rule-date check (G-CON-8). A merge to `main` releases by itself (V-7): nobody tags by hand.
 
 ## How it works
 
@@ -68,6 +68,7 @@ Until a product has dropped its file, set `version-file`. Then the pull request 
 | `templates/release-e-designer.yml` | e-designer: gate is `pnpm check`, `VERSION` checked |
 | `templates/release-docs.yml` | Docs only, like the org constitution: no tests |
 | `templates/ci-go.yml` | A Go product with no `ci.yml` yet |
+| `templates/rule-dates.yml` | Every repository with a constitution: the rule-date check (G-CON-8) |
 
 ## What the owner sets up
 
@@ -89,3 +90,15 @@ Put `[skip release]` in the merge commit message. The tests still run; the commi
 ## A failed run
 
 A run that stops after pushing the tag can be run again: it finds the tag on the same commit and goes on to publish the release. A release that already exists is never made twice.
+
+## Rule dates (G-CON-8)
+
+Every constitution rule says when it was added and when its text last changed:
+
+```
+- **G-CON-1** 2026-10-27 · changed 2026-10-28 · The constitution is the source of truth.
+```
+
+`.github/workflows/rule-dates.yml` fails a pull request that adds a rule without a date, changes a rule's text without setting its changed date, moves an added date, drops a rule instead of marking it `Removed.`, or reuses a removed rule's ID. To adopt it, copy `templates/rule-dates.yml` into the repository; the org constitution passes `files: tech-stack.md`.
+
+The checker is a small Go program in `.github/actions/rule-dates`; `go run . help` there shows its commands. `backfill` dates every rule once from git: added is the first commit on `main` holding the ID, changed is the last commit that changed its text. It shows the lines it would change; `-write` writes them. Test it with `go test ./...` in that folder.
