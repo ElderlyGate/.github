@@ -43,7 +43,11 @@ func Check(base Files, baseDay string, head Files, today string) []string {
 		problems = append(problems, usedTwice(now, again))
 	}
 	for _, p := range sortedPaths(head) {
-		for _, r := range Parse(head[p]).Rules {
+		doc := Parse(head[p])
+		for _, n := range doc.NotRules {
+			problems = append(problems, fmt.Sprintf("%s:%d: %s is in bold like a rule ID but is not read as a rule; write a rule at the start of a line as `- **%s** %s · <text>`, or drop the bold", p, n.Line+1, n.ID, n.ID, today))
+		}
+		for _, r := range doc.Rules {
 			problems = append(problems, checkDates(p, r, today)...)
 		}
 	}

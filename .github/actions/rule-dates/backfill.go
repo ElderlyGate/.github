@@ -109,13 +109,17 @@ func Learn(snaps []Snapshot) (map[string]Dates, []string) {
 	return dates, odd
 }
 
-// Apply writes the dates into the bullet lines of files; it returns the edits and the rules history does not know.
+// Apply writes the dates into the bullet lines of files; it returns the edits, and the rules history does not know
+// with the lines that look like rules but are not.
 func Apply(files Files, dates map[string]Dates) (Files, []Edit, []string) {
 	out := Files{}
 	var edits []Edit
 	var unknown []string
 	for _, p := range sortedPaths(files) {
 		doc := Parse(files[p])
+		for _, n := range doc.NotRules {
+			unknown = append(unknown, fmt.Sprintf("%s:%d: %s is in bold like a rule ID but is not read as a rule; left as it is", p, n.Line+1, n.ID))
+		}
 		for _, r := range doc.Rules {
 			d, ok := dates[r.ID]
 			if !ok {

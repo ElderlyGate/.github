@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestParseReadsDatesTextAndIndentedLines(t *testing.T) {
 	doc := Parse(`# Tech stack
@@ -46,9 +49,37 @@ func TestDatedLineReplacesOldDatesAndLeavesChangedOutWhenEmpty(t *testing.T) {
 	}
 }
 
-func TestDatedLineLeavesOutAChangeOnTheDayOfAdding(t *testing.T) {
+func TestParseAcceptsTheIDShapesOfTheConstitutions(t *testing.T) {
+	doc := Parse("- **G-CON-1** a\n- **V-7** b\n- **H-2** c\n- **P2-1** d\n- **K-12** e\n")
+	var ids []string
+	for _, r := range doc.Rules {
+		ids = append(ids, r.ID)
+	}
+	if got := strings.Join(ids, " "); got != "G-CON-1 V-7 H-2 P2-1 K-12" || len(doc.NotRules) != 0 {
+		t.Errorf("ids = %q, not rules = %+v", got, doc.NotRules)
+	}
+}
+
+func TestParseSkipsRulesInTildeFences(t *testing.T) {
+	doc := Parse("~~~md\n- **G-STACK-5** An example.\n```\n- **G-STACK-7** Still the example.\n~~~\n- **G-STACK-6** Real.\n")
+	if len(doc.Rules) != 1 || doc.Rules[0].ID != "G-STACK-6" || len(doc.NotRules) != 0 {
+		t.Errorf("rules = %+v, want only G-STACK-6", doc.Rules)
+	}
+}
+
+func TestParseReadsCRLFAndAnOverridesHeadingWithMoreWords(t *testing.T) {
+	doc := Parse("## Overrides of org rules\r\n\r\n- **G-STACK-6** 2026-10-27 · Words.\r\n  More.\r\n")
+	if len(doc.Rules) != 1 {
+		t.Fatalf("rules = %+v", doc.Rules)
+	}
+	if r := doc.Rules[0]; !r.Override || r.Added != "2026-10-27" || r.Text != "Words.\n  More." {
+		t.Errorf("rule = %+v", r)
+	}
+}
+
+func TestDatedLineLeavesOutAChangeOnTheDayOfAddingAndKeepsCRLF(t *testing.T) {
 	r := Rule{ID: "V-1"}
-	if got := DatedLine(r, "- **V-1** A version is a tag.", "2026-10-27", "2026-10-27"); got != "- **V-1** 2026-10-27 · A version is a tag." {
+	if got := DatedLine(r, "- **V-1** A version is a tag.\r", "2026-10-27", "2026-10-27"); got != "- **V-1** 2026-10-27 · A version is a tag.\r" {
 		t.Errorf("same day = %q", got)
 	}
 }
