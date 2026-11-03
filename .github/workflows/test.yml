@@ -14,3 +14,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: bash .github/scripts/next-version_test.sh
+
+  rule-dates:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .github/actions/rule-dates
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: .github/actions/rule-dates/go.mod
+          cache: false
+      - run: go vet ./... && go test ./...
