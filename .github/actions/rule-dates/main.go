@@ -15,13 +15,16 @@ const usage = `rule-dates: every constitution rule says when it was added and ch
 
 Start:
   rule-dates <command> [flags] [pattern...]   run at the repository root; patterns default to constitution/*.md
+                                               flags come before the patterns
 
 Commands:
-  check      fail when a rule has no date, or its text changed without its changed date
+  check      fail when a rule has no date, or its text changed without its changed date;
+             any change to the words counts, a re-wrap or an added space too
   backfill   work out every rule's dates from git and show the lines it would change
 
 Flags:
-  -base <rev>          check: compare with this revision (a pull request's base)
+  -base <rev>          check: compare with this revision (a pull request's base, or a push's before;
+                       empty or all zeros: no base, the dates only)
   -today <YYYY-MM-DD>  check: the day a change is dated (default: today, UTC)
   -rev <rev>           backfill: read history up to this revision (default: HEAD)
   -write               backfill: write the dates into the files

@@ -99,6 +99,8 @@ Every constitution rule says when it was added and when its text last changed:
 - **G-CON-1** 2026-10-27 · changed 2026-10-28 · The constitution is the source of truth.
 ```
 
-`.github/workflows/rule-dates.yml` fails a pull request that adds a rule without a date, changes a rule's text without setting its changed date, moves an added date, drops a rule instead of marking it `Removed.`, or reuses a removed rule's ID. To adopt it, copy `templates/rule-dates.yml` into the repository; the org constitution passes `files: tech-stack.md`.
+A rule changed on the day it was added shows only that day (`OmitSameDayChanged` in `rules.go` holds that choice).
+
+`.github/workflows/rule-dates.yml` runs on every pull request and every push to `main`, comparing with the pull request's base or the commit before the push. It fails a rule without a date, a new rule dated before the base's last commit, a text change whose changed date is not later than the one before (or today), a changed date moved while the text stayed, a moved added date, a rule dropped instead of marked `Removed.`, a reused removed ID, and a list item that opens with a bold rule ID but is not written `- **ID** <date> · <text>` at the start of a line. Any change to a rule's words is a text change, a re-wrap or an added space inside a line too; only trailing spaces and line endings are ignored. To adopt it, copy `templates/rule-dates.yml` into the repository; the org constitution passes `files: tech-stack.md`.
 
 The checker is a small Go program in `.github/actions/rule-dates`; `go run . help` there shows its commands. `backfill` dates every rule once from git: added is the first commit on `main` holding the ID, changed is the last commit that changed its text. It shows the lines it would change; `-write` writes them. Test it with `go test ./...` in that folder.
