@@ -34,8 +34,9 @@ func usedTwice(rules map[string]placed, again placed) string {
 }
 
 // Check compares the rules of head with base (nil when there is none) and lists what breaks G-CON-8.
-// A project's override may go away: the org rule then holds again.
-func Check(base, head Files, today string) []string {
+// baseDay is the day of the base's last commit; a new rule is dated no earlier. A project's override may go away:
+// the org rule then holds again.
+func Check(base Files, baseDay string, head Files, today string) []string {
 	now, twice := index(head)
 	var problems []string
 	for _, again := range twice {
@@ -50,6 +51,12 @@ func Check(base, head Files, today string) []string {
 		return problems
 	}
 	before, _ := index(base)
+	for _, id := range sortedIDs(now) {
+		cur := now[id]
+		if _, ok := before[id]; !ok && cur.Added != "" && cur.Added < baseDay {
+			problems = append(problems, fmt.Sprintf("%s:%d: %s is new but dated %s, before the base's last commit on %s; a new rule carries the day it is added, %s", cur.Path, cur.Line+1, id, cur.Added, baseDay, today))
+		}
+	}
 	for _, id := range sortedIDs(before) {
 		old := before[id]
 		cur, ok := now[id]
@@ -66,13 +73,35 @@ func Check(base, head Files, today string) []string {
 		}
 		switch {
 		case old.Text == cur.Text:
+			if old.Added != "" && cur.Changed != old.Changed {
+				problems = append(problems, fmt.Sprintf("%s: %s kept its text, so its dates stay `%s`", where, id, datesOf(old.Rule)))
+			}
 		case old.Text == Removed && !old.Override:
 			problems = append(problems, fmt.Sprintf("%s: %s was removed; an ID is never reused, give the rule a new ID", where, id))
-		case cur.Changed == "" || cur.Changed == old.Changed:
+		case !changeDated(old.Rule, cur.Rule, today):
 			problems = append(problems, fmt.Sprintf("%s: %s changed its text; set its changed date to %s", where, id, today))
 		}
 	}
 	return problems
+}
+
+// changeDated says whether cur, whose text differs from old, carries the day of that change:
+// today, or a day later than old's last date.
+func changeDated(old, cur Rule, today string) bool {
+	last := cur.Changed
+	since := old.Changed
+	if since == "" {
+		since = old.Added
+	}
+	return last != "" && (last == today || last > since)
+}
+
+// datesOf is how r's dates read on its line.
+func datesOf(r Rule) string {
+	if r.Changed != "" {
+		return r.Added + " · changed " + r.Changed
+	}
+	return r.Added
 }
 
 // checkDates says what is wrong with a rule's own dates.

@@ -76,12 +76,16 @@ func check(dir, base, today string, patterns []string, out io.Writer) (int, erro
 		return 0, err
 	}
 	var before Files
+	var baseDay string
 	if base != "" {
 		if before, err = RevFiles(dir, base, patterns); err != nil {
 			return 0, err
 		}
+		if baseDay, err = CommitDay(dir, base); err != nil {
+			return 0, err
+		}
 	}
-	problems := Check(before, head, today)
+	problems := Check(before, baseDay, head, today)
 	for _, p := range problems {
 		fmt.Fprintln(out, p)
 	}

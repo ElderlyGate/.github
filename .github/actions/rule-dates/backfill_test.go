@@ -100,6 +100,13 @@ func TestBackfillThenCheckOnARealRepository(t *testing.T) {
 	if code := run([]string{"check", "-base", "HEAD", "-today", "2026-11-03"}, dir, &out, &out); code != 0 {
 		t.Fatalf("check after backfill exit %d: %s", code, out.String())
 	}
+	out.Reset()
+	if err := os.WriteFile(filepath.Join(dir, "constitution", "tech-stack.md"), append(b, "- **P-3** 2026-10-28 · Three.\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if code := run([]string{"check", "-base", "HEAD", "-today", "2026-11-03"}, dir, &out, &out); code != 1 || !strings.Contains(out.String(), "before the base's last commit on 2026-10-29") {
+		t.Fatalf("check of a backdated new rule exit %d: %s", code, out.String())
+	}
 	if err := os.WriteFile(filepath.Join(dir, "constitution", "tech-stack.md"), []byte(strings.Replace(string(b), "Two.", "Two, new.", 1)), 0o644); err != nil {
 		t.Fatal(err)
 	}

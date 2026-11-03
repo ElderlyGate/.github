@@ -102,6 +102,12 @@ func History(dir, rev string, patterns []string) ([]Commit, error) {
 	return commits, nil
 }
 
+// CommitDay is the day rev was committed.
+func CommitDay(dir, rev string) (string, error) {
+	out, err := git(dir, "log", "-1", "--format=%cs", rev)
+	return strings.TrimSpace(out), err
+}
+
 // sortedPaths gives the paths of files in a stable order.
 func sortedPaths(files Files) []string {
 	paths := make([]string, 0, len(files))
