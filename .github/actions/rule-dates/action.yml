@@ -6,7 +6,7 @@ inputs:
     description: The constitution files, as space-separated patterns from the repository root.
     default: constitution/*.md
   base:
-    description: The revision to compare with, a pull request's base. Empty checks the dates only.
+    description: The revision to compare with, a pull request's base or a push's before. Empty or all zeros checks the dates only.
     default: ""
 
 runs:

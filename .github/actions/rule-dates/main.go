@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -77,7 +78,8 @@ func check(dir, base, today string, patterns []string, out io.Writer) (int, erro
 	}
 	var before Files
 	var baseDay string
-	if base != "" {
+	// A push that opens a branch has an all-zero before: there is nothing to compare with.
+	if strings.Trim(base, "0") != "" {
 		if before, err = RevFiles(dir, base, patterns); err != nil {
 			return 0, err
 		}

@@ -104,6 +104,10 @@ func TestBackfillThenCheckOnARealRepository(t *testing.T) {
 		t.Fatalf("check after backfill exit %d: %s", code, out.String())
 	}
 	out.Reset()
+	if code := run([]string{"check", "-base", strings.Repeat("0", 40), "-today", "2026-11-03"}, dir, &out, &out); code != 0 {
+		t.Fatalf("check with an all-zero base exit %d: %s", code, out.String())
+	}
+	out.Reset()
 	if err := os.WriteFile(filepath.Join(dir, "constitution", "tech-stack.md"), append(b, "- **P-3** 2026-10-28 · Three.\n"...), 0o644); err != nil {
 		t.Fatal(err)
 	}
