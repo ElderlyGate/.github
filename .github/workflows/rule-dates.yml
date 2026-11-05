@@ -1,0 +1,28 @@
+name: rule-dates
+
+# G-CON-8: every constitution rule carries the day it was added and the day its text last changed.
+on:
+  workflow_call:
+    inputs:
+      files:
+        description: "The constitution files, as space-separated patterns from the repository root."
+        type: string
+        default: constitution/*.md
+
+permissions:
+  contents: read
+
+jobs:
+  rule-dates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0
+      # A `uses:` cannot be an expression, so this cannot follow the ref the caller pins;
+      # the template calls this workflow @main, and the action follows main with it.
+      - uses: ElderlyGate/.github/.github/actions/rule-dates@main
+        with:
+          files: ${{ inputs.files }}
+          # A pull request compares with its base; a push to main with the commit before it.
+          base: ${{ github.event.pull_request.base.sha || github.event.before }}

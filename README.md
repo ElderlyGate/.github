@@ -1,6 +1,6 @@
 # ElderlyGate/.github
 
-The org's shared release pipeline. A merge to `main` releases by itself (V-7): nobody tags by hand.
+The org's shared workflows: the release pipeline, and the rule-date check (G-CON-8). A merge to `main` releases by itself (V-7): nobody tags by hand.
 
 ## How it works
 
@@ -68,6 +68,7 @@ Until a product has dropped its file, set `version-file`. Then the pull request 
 | `templates/release-e-designer.yml` | e-designer: gate is `pnpm check`, `VERSION` checked |
 | `templates/release-docs.yml` | Docs only, like the org constitution: no tests |
 | `templates/ci-go.yml` | A Go product with no `ci.yml` yet |
+| `templates/rule-dates.yml` | Every repository with a constitution: the rule-date check (G-CON-8) |
 
 ## What the owner sets up
 
@@ -89,3 +90,17 @@ Put `[skip release]` in the merge commit message. The tests still run; the commi
 ## A failed run
 
 A run that stops after pushing the tag can be run again: it finds the tag on the same commit and goes on to publish the release. A release that already exists is never made twice.
+
+## Rule dates (G-CON-8)
+
+Every constitution rule says when it was added and when its text last changed:
+
+```
+- **G-CON-1** 2026-10-27 · changed 2026-10-28 · The constitution is the source of truth.
+```
+
+A rule changed on the day it was added shows only that day (`OmitSameDayChanged` in `rules.go` holds that choice).
+
+`.github/workflows/rule-dates.yml` runs on every pull request and every push to `main`, comparing with the pull request's base or the commit before the push. It fails a rule without a date, a new rule dated before the base's last commit, a text change whose changed date is not later than the one before (or today), a changed date moved while the text stayed, a moved added date, a rule dropped instead of marked `Removed.`, a reused removed ID, and a list item that opens with a bold rule ID but is not written `- **ID** <date> · <text>` at the start of a line. Any change to a rule's words is a text change, a re-wrap or an added space inside a line too; only trailing spaces and line endings are ignored. To adopt it, copy `templates/rule-dates.yml` into the repository; the org constitution passes `files: tech-stack.md`.
+
+The checker is a small Go program in `.github/actions/rule-dates`; `go run . help` there shows its commands. `backfill` dates every rule once from git: added is the first commit on `main` holding the ID, changed is the last commit that changed its text. It shows the lines it would change; `-write` writes them. Test it with `go test ./...` in that folder.
