@@ -14,7 +14,10 @@ permissions:
 
 jobs:
   rule-dates:
-    runs-on: ubuntu-latest
+    # A private repository runs it on the org's own runners (GitHub's minutes are for releases); a public one on
+    # GitHub's machines, free for it, and never on ours: a fork's pull request must not run on a Mac in the org.
+    name: ${{ github.event.repository.private && 'local · rule-dates' || 'github · rule-dates' }}
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","eg-linux"]') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
