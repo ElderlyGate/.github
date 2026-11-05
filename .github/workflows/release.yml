@@ -28,6 +28,10 @@ on:
         description: "Make a release candidate vX.Y.Z-rc.N instead of a release (V-8)."
         type: boolean
         default: false
+      runner:
+        description: "Where this release runs: local (the org's own eg-linux runner) or github. Empty: the RELEASE_RUNNER variable, else github."
+        type: string
+        default: ""
     secrets:
       GO_PRIVATE_TOKEN:
         description: "Read-only token for the org's private Go modules (ui-kit, mankit). Pass it with secrets: inherit."
@@ -42,9 +46,11 @@ permissions:
 
 jobs:
   release:
+    # The check's name says where it ran. RELEASE_RUNNER (org or repo variable) picks local or github; a run's runner input wins.
+    name: ${{ (inputs.runner || vars.RELEASE_RUNNER) == 'local' && 'local · release' || 'github · release' }}
     # Tags live on main only (V-1); "[skip release]" in the merge commit holds the release back.
     if: github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip release]')
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner || vars.RELEASE_RUNNER) == 'local' && fromJSON('["self-hosted","eg-linux"]') || 'ubuntu-latest' }}
     permissions:
       contents: write
     # Merges release one after another, so two runs never pick the same version.
@@ -63,12 +69,17 @@ jobs:
         with:
           fetch-depth: 0
       # The org's private Go modules are read over HTTPS with GO_PRIVATE_TOKEN, when the caller passes it.
+      # Set for this job only, through its environment: an own runner keeps its home, so nothing goes into ~/.gitconfig.
       - name: private Go modules
         env:
           GO_PRIVATE_TOKEN: ${{ secrets.GO_PRIVATE_TOKEN }}
         run: |
           if [ -n "$GO_PRIVATE_TOKEN" ]; then
-            git config --global url."https://x-access-token:${GO_PRIVATE_TOKEN}@github.com/ElderlyGate/".insteadOf "https://github.com/ElderlyGate/"
+            {
+              echo "GIT_CONFIG_COUNT=1"
+              echo "GIT_CONFIG_KEY_0=url.https://x-access-token:${GO_PRIVATE_TOKEN}@github.com/ElderlyGate/.insteadOf"
+              echo "GIT_CONFIG_VALUE_0=https://github.com/ElderlyGate/"
+            } >> "$GITHUB_ENV"
           fi
 
       - id: next
