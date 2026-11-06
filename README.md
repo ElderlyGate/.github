@@ -69,6 +69,7 @@ Until a product has dropped its file, set `version-file`. Then the pull request 
 | `templates/release-docs.yml` | Docs only, like the org constitution: no tests |
 | `templates/ci-go.yml` | A Go product with no `ci.yml` yet |
 | `templates/rule-dates.yml` | Every repository with a constitution: the rule-date check (G-CON-8) |
+| `templates/design-check.yml` | Every product repository: the design check (G-PLAN-9) |
 
 ## What the owner sets up
 
@@ -104,3 +105,5 @@ A rule changed on the day it was added shows only that day (`OmitSameDayChanged`
 `.github/workflows/rule-dates.yml` runs on every pull request and every push to `main`, comparing with the pull request's base or the commit before the push. It fails a rule without a date, a new rule dated before the base's last commit, a text change whose changed date is not later than the one before (or today), a changed date moved while the text stayed, a moved added date, a rule dropped instead of marked `Removed.`, a reused removed ID, and a list item that opens with a bold rule ID but is not written `- **ID** <date> · <text>` at the start of a line. Any change to a rule's words is a text change, a re-wrap or an added space inside a line too; only trailing spaces and line endings are ignored. To adopt it, copy `templates/rule-dates.yml` into the repository; the org constitution passes `files: tech-stack.md`.
 
 The checker is a small Go program in `.github/actions/rule-dates`; `go run . help` there shows its commands. `backfill` dates every rule once from git: added is the first commit on `main` holding the ID, changed is the last commit that changed its text. It shows the lines it would change; `-write` writes them. Test it with `go test ./...` in that folder.
+
+`.github/workflows/design-check.yml` runs on every pull request. It fails one that changes code without changing a file under `.designer/`, unless the pull request carries the label `no-design-change`. Code is every file except the design, cards (`.kanban/`), Markdown, `docs/`, `constitution/`, `.github/` and the licence; the board's own `docker-compose.yml`, `.env` and `.gitignore` in `.designer/` are not the design. Adding or taking off the label runs it again. To adopt it, copy `templates/design-check.yml` into the repository. The check is `.github/scripts/design-check.sh`; test it with `bash .github/scripts/design-check_test.sh`.
