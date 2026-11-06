@@ -1,0 +1,21 @@
+name: design-check
+description: Fail a change that alters code without changing the design under .designer/ (G-PLAN-9).
+
+inputs:
+  base:
+    description: The revision to compare with, a pull request's base.
+    required: true
+  labels:
+    description: The pull request's labels, comma-separated; no-design-change passes it.
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    # The action is downloaded with its whole repository, so the script sits two folders up.
+    - shell: bash
+      env:
+        BASE: ${{ inputs.base }}
+        LABELS: ${{ inputs.labels }}
+        SCRIPT: ${{ github.action_path }}/../../scripts/design-check.sh
+      run: bash "$SCRIPT" "$BASE" "$LABELS"

@@ -1,0 +1,14 @@
+# Copy to .github/workflows/design-check.yml in every product repository (G-PLAN-9).
+name: design-check
+
+on:
+  pull_request:
+    # labeled and unlabeled run it again when no-design-change is added or taken off.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  design-check:
+    uses: ElderlyGate/.github/.github/workflows/design-check.yml@main
