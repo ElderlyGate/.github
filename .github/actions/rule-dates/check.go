@@ -34,7 +34,8 @@ func usedTwice(rules map[string]placed, again placed) string {
 }
 
 // Check compares the rules of head with base (nil when there is none) and lists what breaks G-CON-8.
-// baseDay is the day of the base's last commit; a new rule is dated no earlier. A project's override may go away:
+// baseDay is the day of the base's last commit; a new rule is dated no earlier, except in the one-time backfill
+// of a file that had no rule IDs at the base. The dates of every rule are checked as usual: real, not in the future. A project's override may go away:
 // the org rule then holds again.
 func Check(base Files, baseDay string, head Files, today string) []string {
 	now, twice := index(head)
@@ -55,8 +56,16 @@ func Check(base Files, baseDay string, head Files, today string) []string {
 		return problems
 	}
 	before, _ := index(base)
+	ruled := map[string]bool{}
+	for _, b := range before {
+		ruled[b.Path] = true
+	}
 	for _, id := range sortedIDs(now) {
 		cur := now[id]
+		// A file with no rule IDs at the base is being given its first ones: the one-time backfill keeps the real dates.
+		if _, ok := before[id]; !ok && !ruled[cur.Path] && cur.Added != "" && cur.Added < baseDay {
+			continue
+		}
 		if _, ok := before[id]; !ok && cur.Added != "" && cur.Added < baseDay {
 			problems = append(problems, fmt.Sprintf("%s:%d: %s is new but dated %s, before the base's last commit on %s; a new rule carries the day it is added, %s", cur.Path, cur.Line+1, id, cur.Added, baseDay, today))
 		}

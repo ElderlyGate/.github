@@ -157,3 +157,22 @@ func TestCheckLetsAProjectDropAnOverrideUnderALongerHeading(t *testing.T) {
 	base := file("## Overrides of org rules", "", "- **G-STACK-6** 2026-10-27 · Delete asks for the name.")
 	expectProblems(t, Check(base, "", file("## Overrides of org rules"), today))
 }
+
+func TestCheckAllowsOldDatesWhenTheBaseFileHasNoIDs(t *testing.T) {
+	base := file("Words without any rule ID.")
+	head := file("- **V-1** 2026-10-01 · Words.", "- **V-2** 2026-10-05 · changed 2026-10-20 · More words.")
+	expectProblems(t, Check(base, "2026-11-01", head, today))
+	expectProblems(t, Check(Files{}, "2026-11-01", head, today))
+}
+
+func TestCheckRefusesOldDatesWhenTheBaseFileHadAnID(t *testing.T) {
+	base := file("- **V-1** 2026-10-27 · Words.")
+	head := file("- **V-1** 2026-10-27 · Words.", "- **V-2** 2026-10-01 · Added later.")
+	expectProblems(t, Check(base, "2026-11-01", head, today), "V-2 is new but dated 2026-10-01")
+}
+
+func TestCheckRefusesAFutureOrInvalidDateInABackfill(t *testing.T) {
+	base := file("Words without any rule ID.")
+	head := file("- **V-1** 2026-12-01 · Words.", "- **V-2** 2026-13-01 · Words.")
+	expectProblems(t, Check(base, "2026-11-01", head, today), "V-1 has 2026-12-01, which is after today", "V-2 has 2026-13-01, which is not a date")
+}
