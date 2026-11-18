@@ -77,6 +77,8 @@ jobs:
       cancel-in-progress: false
     outputs:
       version: ${{ steps.plan.outputs.tag }}
+      # Where this job runs, as runs-on above names it, so the image job runs there too; the one place outside runs-on that says it.
+      runs-on: ${{ toJSON((inputs.runner || vars.RELEASE_RUNNER) == 'local' && fromJSON('["self-hosted","eg-linux"]') || 'ubuntu-latest') }}
     env:
       GH_TOKEN: ${{ github.token }}
       GOPRIVATE: github.com/ElderlyGate/*
@@ -201,9 +203,9 @@ jobs:
   image:
     needs: release
     if: inputs.image && needs.release.outputs.version != ''
-    # The release's runner, named the same way: eg-linux has buildx and QEMU for amd64 (constitution's infrastructure-setup/runner-linux.sh), GitHub's machines have both.
-    name: ${{ (inputs.runner || vars.RELEASE_RUNNER) == 'local' && 'local · image' || 'github · image' }}
-    runs-on: ${{ (inputs.runner || vars.RELEASE_RUNNER) == 'local' && fromJSON('["self-hosted","eg-linux"]') || 'ubuntu-latest' }}
+    # The release's runner, as the release job says it, and named the same way: eg-linux has buildx and QEMU for amd64 (constitution's infrastructure-setup/runner-linux.sh), GitHub's machines have both.
+    name: ${{ contains(needs.release.outputs.runs-on, 'self-hosted') && 'local · image' || 'github · image' }}
+    runs-on: ${{ fromJSON(needs.release.outputs.runs-on) }}
     # No permissions here: asking for packages: write would fail every caller that does not grant it, image or not. The caller's job grants it.
     outputs:
       name: ${{ steps.image.outputs.name }}
