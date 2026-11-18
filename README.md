@@ -56,7 +56,7 @@ Outputs: `version`, the tag that was released, or empty; `image`, the image push
 
 With `image: true`, a job after the release builds the Dockerfile at the repository's root, target `image-target`, for linux/amd64 and linux/arm64, and pushes it as `<image-name>:<version>`, the version as the archives name it (`7.0.1`, no `v`), and `<image-name>:latest`. A release candidate is pushed under its version only, never `latest` (V-8). OCI labels name the source, the commit and the tag. The tag rule is `.github/scripts/image-tags.sh`; test it with `bash .github/scripts/image-tags_test.sh`.
 
-It pushes with the job's own `GITHUB_TOKEN`, no personal token, so the calling job grants `packages: write` beside `contents: write`. The shared workflow asks for no permission itself for that job: asking would fail every caller that does not grant it. The job runs on GitHub's `ubuntu-latest`, whatever `runner` says, since it needs buildx and emulation.
+It pushes with the job's own `GITHUB_TOKEN`, no personal token, so the calling job grants `packages: write` beside `contents: write`. The shared workflow asks for no permission itself for that job: asking would fail every caller that does not grant it. The job runs where the release does (`runner`, else `RELEASE_RUNNER`): the org's eg-linux has buildx and QEMU for linux/amd64 from the constitution's `infrastructure-setup/runner-linux.sh`, and GitHub's `ubuntu-latest` has both.
 
 A new org package is private by GitHub's default; check it on the package page after the first release. A private one needs `docker login ghcr.io` with a token that can read packages. Making it public is a visibility setting on the package's page on GitHub; nothing here changes.
 

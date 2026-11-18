@@ -201,8 +201,9 @@ jobs:
   image:
     needs: release
     if: inputs.image && needs.release.outputs.version != ''
-    # GitHub's runner always, as it has buildx and emulates the other platform; the org's eg-linux has docker without buildx.
-    runs-on: ubuntu-latest
+    # The release's runner, named the same way: eg-linux has buildx and QEMU for amd64 (constitution's infrastructure-setup/runner-linux.sh), GitHub's machines have both.
+    name: ${{ (inputs.runner || vars.RELEASE_RUNNER) == 'local' && 'local · image' || 'github · image' }}
+    runs-on: ${{ (inputs.runner || vars.RELEASE_RUNNER) == 'local' && fromJSON('["self-hosted","eg-linux"]') || 'ubuntu-latest' }}
     # No permissions here: asking for packages: write would fail every caller that does not grant it, image or not. The caller's job grants it.
     outputs:
       name: ${{ steps.image.outputs.name }}
