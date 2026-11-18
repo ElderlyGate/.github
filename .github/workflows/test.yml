@@ -21,6 +21,23 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - run: bash .github/scripts/next-version_test.sh
+      - run: bash .github/scripts/image-tags_test.sh
+
+  image:
+    name: github · image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      # This branch's action, not main's, so a change to it is tested before it merges.
+      - uses: ./.github/actions/image
+        with:
+          tag: v1.2.3
+          # This repository's own name, .github, is no image name.
+          name: ghcr.io/elderlygate/image-test
+          target: run
+          version-arg: VERSION
+          context: .github/actions/image/testdata
+          push: "false"
 
   rule-dates:
     runs-on: ubuntu-latest

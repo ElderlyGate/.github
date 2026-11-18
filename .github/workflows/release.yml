@@ -28,6 +28,22 @@ on:
         description: "Make a release candidate vX.Y.Z-rc.N instead of a release (V-8)."
         type: boolean
         default: false
+      image:
+        description: "Also build the Dockerfile's image target for linux/amd64 and linux/arm64 and push it, tagged with the version and latest. The calling job grants packages: write."
+        type: boolean
+        default: false
+      image-name:
+        description: "The image, registry and owner included. Empty: ghcr.io/<owner>/<repo>, so a renamed org or repository renames the image too."
+        type: string
+        default: ""
+      image-target:
+        description: "The Dockerfile target the image is built from."
+        type: string
+        default: run
+      image-version-arg:
+        description: "A build argument that receives the tag, so the binary in the image can print it (V-5). Empty: none."
+        type: string
+        default: ""
       runner:
         description: "Where this release runs: local (the org's own eg-linux runner) or github. Empty: the RELEASE_RUNNER variable, else github."
         type: string
@@ -40,9 +56,11 @@ on:
       version:
         description: "The tag that was released, or empty."
         value: ${{ jobs.release.outputs.version }}
+      image:
+        description: "The image pushed, without a tag, or empty."
+        value: ${{ jobs.image.outputs.name }}
 
-permissions:
-  contents: read
+# No workflow-wide permissions: the image job takes the caller's token as given, so a caller that grants no packages: write still validates. The release job names its own.
 
 jobs:
   release:
@@ -178,3 +196,25 @@ jobs:
           args=(--verify-tag --title "$TAG" --notes-file "$NOTES")
           if [ "$RC" = true ]; then args+=(--prerelease); fi
           gh release create "$TAG" "${args[@]}"
+
+  # The product's image for this release, when it asks for one.
+  image:
+    needs: release
+    if: inputs.image && needs.release.outputs.version != ''
+    # GitHub's runner always, as it has buildx and emulates the other platform; the org's eg-linux has docker without buildx.
+    runs-on: ubuntu-latest
+    # No permissions here: asking for packages: write would fail every caller that does not grant it, image or not. The caller's job grants it.
+    outputs:
+      name: ${{ steps.image.outputs.name }}
+    steps:
+      # The released commit, as its tag names it.
+      - uses: actions/checkout@v5
+        with:
+          ref: refs/tags/${{ needs.release.outputs.version }}
+      - id: image
+        uses: ElderlyGate/.github/.github/actions/image@main
+        with:
+          tag: ${{ needs.release.outputs.version }}
+          name: ${{ inputs.image-name }}
+          target: ${{ inputs.image-target }}
+          version-arg: ${{ inputs.image-version-arg }}

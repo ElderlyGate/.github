@@ -43,10 +43,22 @@ The script is `.github/scripts/next-version.sh`. Test it with `bash .github/scri
 | `go-version-file` | `go.mod` | The Go version for goreleaser |
 | `node-version` | | A Node version to set up before the build (kanban-app's goreleaser builds the UI) |
 | `rc` | `false` | Make a release candidate `vX.Y.Z-rc.N` instead |
+| `image` | `false` | Also build the product's container image after the release and push it (below) |
+| `image-name` | `ghcr.io/<owner>/<repo>` | The image, registry and owner included: the one setting that names it. Left empty, it follows the repository, so a renamed org or repository renames the image with nothing to edit |
+| `image-target` | `run` | The Dockerfile target the image is built from |
+| `image-version-arg` | | A build argument that receives the tag, so the binary in the image prints it (V-5) |
 
 Secret: `GO_PRIVATE_TOKEN`, optional. A read-only token (Contents: read) for the org's private Go modules, such as ui-kit and mankit; it is an org secret, passed with `secrets: inherit`. With it, `go` and goreleaser fetch `github.com/ElderlyGate/*` over HTTPS (`GOPRIVATE` is set). Without it, a product that imports a private module fails to build.
 
-Output: `version`, the tag that was released, or empty.
+Outputs: `version`, the tag that was released, or empty; `image`, the image pushed without a tag, or empty.
+
+## The image
+
+With `image: true`, a job after the release builds the Dockerfile at the repository's root, target `image-target`, for linux/amd64 and linux/arm64, and pushes it as `<image-name>:<version>`, the version as the archives name it (`7.0.1`, no `v`), and `<image-name>:latest`. A release candidate is pushed under its version only, never `latest` (V-8). OCI labels name the source, the commit and the tag. The tag rule is `.github/scripts/image-tags.sh`; test it with `bash .github/scripts/image-tags_test.sh`.
+
+It pushes with the job's own `GITHUB_TOKEN`, no personal token, so the calling job grants `packages: write` beside `contents: write`. The shared workflow asks for no permission itself for that job: asking would fail every caller that does not grant it. The job runs on GitHub's `ubuntu-latest`, whatever `runner` says, since it needs buildx and emulation.
+
+A new org package is private by GitHub's default; check it on the package page after the first release. A private one needs `docker login ghcr.io` with a token that can read packages. Making it public is a visibility setting on the package's page on GitHub; nothing here changes.
 
 ## The version file (V-6)
 

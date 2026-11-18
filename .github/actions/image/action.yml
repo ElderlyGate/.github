@@ -1,0 +1,69 @@
+name: image
+description: Build a product's container image for linux/amd64 and linux/arm64, tagged for a release, and push it.
+
+inputs:
+  tag:
+    description: The release tag, vX.Y.Z or vX.Y.Z-rc.N.
+    required: true
+  name:
+    description: The image, registry and owner included. Empty, ghcr.io/<owner>/<repo>.
+    default: ""
+  target:
+    description: The Dockerfile target to build.
+    default: run
+  version-arg:
+    description: A build argument that receives the tag, so the binary inside can print it (V-5). Empty, none.
+    default: ""
+  context:
+    description: The build context, holding the Dockerfile.
+    default: .
+  push:
+    description: Push to the registry; false builds only, as the tests do.
+    default: "true"
+
+outputs:
+  name:
+    description: The image, without a tag.
+    value: ${{ steps.tags.outputs.name }}
+
+runs:
+  using: composite
+  steps:
+    # The action is downloaded with its whole repository, so the script sits two folders up.
+    - id: tags
+      shell: bash
+      env:
+        TAG: ${{ inputs.tag }}
+        NAME: ${{ inputs.name }}
+        SCRIPT: ${{ github.action_path }}/../../scripts/image-tags.sh
+      run: |
+        refs=$(bash "$SCRIPT" "$TAG" "$GITHUB_REPOSITORY" "$NAME")
+        first=$(head -n 1 <<< "$refs")
+        echo "name=${first%:*}" >> "$GITHUB_OUTPUT"
+        echo "registry=${first%%/*}" >> "$GITHUB_OUTPUT"
+        echo "tags=$(paste -sd, - <<< "$refs")" >> "$GITHUB_OUTPUT"
+    # The other platform is emulated; a Dockerfile that builds on $BUILDPLATFORM emulates only what it must.
+    - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+    - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+    # The job's own token, with packages: write from the caller; no personal token. It reaches ghcr.io only, so a name on another registry needs its own login before this action.
+    - if: inputs.push == 'true' && steps.tags.outputs.registry == 'ghcr.io'
+      uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+    - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      with:
+        context: ${{ inputs.context }}
+        target: ${{ inputs.target }}
+        platforms: linux/amd64,linux/arm64
+        build-args: ${{ inputs.version-arg && format('{0}={1}', inputs.version-arg, inputs.tag) || '' }}
+        tags: ${{ steps.tags.outputs.tags }}
+        # The build names its source, commit and version, as OCI labels.
+        labels: |
+          org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.version=${{ inputs.tag }}
+        push: ${{ inputs.push == 'true' }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
