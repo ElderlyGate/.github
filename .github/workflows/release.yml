@@ -163,7 +163,7 @@ jobs:
         run: |
           if [ -n "$COMMAND" ]; then
             [ -z "$VERSION" ] || { echo "give node-version or node-version-command, not both" >&2; exit 1; }
-            VERSION=$(eval "$COMMAND")
+            VERSION=$(eval "$COMMAND" | tr -d '[:space:]')
             [ -n "$VERSION" ] || { echo "node-version-command printed no version: $COMMAND" >&2; exit 1; }
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
