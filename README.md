@@ -42,6 +42,7 @@ The script is `.github/scripts/next-version.sh`. Test it with `bash .github/scri
 | `version-file` | | A file that repeats the version (V-6). The release stops when it differs |
 | `go-version-file` | `go.mod` | The Go version for goreleaser |
 | `node-version` | | A Node version to set up before the build (kanban-app's goreleaser builds the UI) |
+| `node-version-command` | | A command, run in the checkout, that prints the Node version to set up, for a version kept where `setup-node` cannot read it, such as a Dockerfile `ARG` (e-designer's `sh docker/node-major.sh`). Give it or `node-version`, not both |
 | `rc` | `false` | Make a release candidate `vX.Y.Z-rc.N` instead |
 | `image` | `false` | Also build the product's container image after the release and push it (below) |
 | `image-name` | `ghcr.io/<owner>/<repo>` | The image, registry and owner included: the one setting that names it. Left empty, it follows the repository, so a renamed org or repository renames the image with nothing to edit |

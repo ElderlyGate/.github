@@ -24,6 +24,10 @@ on:
         description: "A Node version to set up before the build, when the build needs one."
         type: string
         default: ""
+      node-version-command:
+        description: "A command, run in the checkout, that prints the Node version to set up, for a version kept where setup-node cannot read it (a Dockerfile ARG). Give it or node-version, not both."
+        type: string
+        default: ""
       rc:
         description: "Make a release candidate vX.Y.Z-rc.N instead of a release (V-8)."
         type: boolean
@@ -150,10 +154,25 @@ jobs:
         with:
           go-version-file: ${{ inputs.go-version-file }}
 
-      - if: steps.plan.outputs.tag != '' && inputs.node-version != ''
+      # The Node the build needs, as given or as the product's own command reads it from its one home.
+      - id: node
+        if: steps.plan.outputs.tag != '' && (inputs.node-version != '' || inputs.node-version-command != '')
+        env:
+          VERSION: ${{ inputs.node-version }}
+          COMMAND: ${{ inputs.node-version-command }}
+        run: |
+          if [ -n "$COMMAND" ]; then
+            [ -z "$VERSION" ] || { echo "give node-version or node-version-command, not both" >&2; exit 1; }
+            VERSION=$(eval "$COMMAND")
+            VERSION=$(printf %s "$VERSION" | tr -d '[:space:]')
+            [ -n "$VERSION" ] || { echo "node-version-command printed no version: $COMMAND" >&2; exit 1; }
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - if: steps.node.outputs.version != ''
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ inputs.node-version }}
+          node-version: ${{ steps.node.outputs.version }}
 
       # V-2: one annotated tag; a run again finds it on HEAD and goes on from there.
       - name: tag
