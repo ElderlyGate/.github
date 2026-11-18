@@ -58,7 +58,7 @@ With `image: true`, a job after the release builds the Dockerfile at the reposit
 
 It pushes with the job's own `GITHUB_TOKEN`, no personal token, so the calling job grants `packages: write` beside `contents: write`. The shared workflow asks for no permission itself for that job: asking would fail every caller that does not grant it. The job runs on GitHub's `ubuntu-latest`, whatever `runner` says, since it needs buildx and emulation.
 
-A new package is private unless the org's package settings say otherwise; a private one needs `docker login ghcr.io` with a token that can read packages. Making it public is a visibility setting on the package's page on GitHub; nothing here changes.
+A new org package is private by GitHub's default; check it on the package page after the first release. A private one needs `docker login ghcr.io` with a token that can read packages. Making it public is a visibility setting on the package's page on GitHub; nothing here changes.
 
 ## The version file (V-6)
 

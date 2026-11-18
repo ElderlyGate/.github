@@ -25,6 +25,9 @@ expect "a candidate is never latest" "ghcr.io/elderlygate/e-designer:7.1.0-rc.2"
 expect "a name given wins over the repository" "registry.example.com/team/board:1.0.0
 registry.example.com/team/board:latest" v1.0.0 ElderlyGate/e-designer registry.example.com/team/board
 
+expect "a name given is lowercased too" "ghcr.io/elderlygate/board:1.0.0
+ghcr.io/elderlygate/board:latest" v1.0.0 ElderlyGate/e-designer ghcr.io/ElderlyGate/Board
+
 expect "an empty name is the repository's" "ghcr.io/elderlygate/kanban-app:0.1.0
 ghcr.io/elderlygate/kanban-app:latest" v0.1.0 ElderlyGate/kanban-app ""
 
