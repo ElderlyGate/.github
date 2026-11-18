@@ -23,6 +23,22 @@ jobs:
       - run: bash .github/scripts/next-version_test.sh
       - run: bash .github/scripts/image-tags_test.sh
 
+  # A workspace an earlier job left sparse, as an own runner keeps it: after unsparse, actions/checkout fills the whole tree.
+  unsparse:
+    name: github · unsparse
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          sparse-checkout: |
+            README.md
+            .github/actions/unsparse
+          sparse-checkout-cone-mode: false
+      - run: test ! -e templates
+      - uses: ./.github/actions/unsparse
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - run: test -d templates && test -f .github/scripts/next-version.sh
+
   image:
     name: github · image
     runs-on: ubuntu-latest

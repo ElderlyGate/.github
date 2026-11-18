@@ -1,0 +1,18 @@
+name: unsparse
+description: Undo a sparse checkout an earlier job left in this runner's workspace, so the next actions/checkout fills the whole tree.
+
+# An own runner keeps its workspace between jobs. After a non-cone sparse checkout there, actions/checkout
+# runs `git sparse-checkout disable`, which writes false to .git/config.worktree, then unsets
+# extensions.worktreeConfig, so .git/config's core.sparseCheckout=true holds again and the tree stays sparse.
+# Run before actions/checkout; on a fresh workspace it does nothing.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        w=$GITHUB_WORKSPACE
+        if [ -d "$w/.git" ] && [ "$(git -C "$w" config --local --get core.sparseCheckout || true)" = true ]; then
+          git -C "$w" sparse-checkout disable
+          git -C "$w" config --local --unset-all core.sparseCheckout
+          echo "undid a sparse checkout left in $w"
+        fi

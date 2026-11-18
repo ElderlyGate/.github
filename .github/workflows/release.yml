@@ -85,6 +85,8 @@ jobs:
       BUILD: ${{ inputs.build }}
       RC: ${{ inputs.rc }}
     steps:
+      # An earlier job on an own runner may have left this workspace sparse (another product's job, a sparse checkout).
+      - uses: ElderlyGate/.github/.github/actions/unsparse@main
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
@@ -204,13 +206,16 @@ jobs:
     needs: release
     if: inputs.image && needs.release.outputs.version != ''
     # The release's runner, as the release job says it, and named the same way: eg-linux has buildx and QEMU for amd64 (constitution's infrastructure-setup/runner-linux.sh), GitHub's machines have both.
-    name: ${{ contains(needs.release.outputs.runs-on, 'self-hosted') && 'local · image' || 'github · image' }}
+    # From inputs and variables, as the release job's: a name read from needs showed as its raw expression when the job was skipped.
+    name: ${{ (inputs.runner || vars.RELEASE_RUNNER) == 'local' && 'local · image' || 'github · image' }}
     runs-on: ${{ fromJSON(needs.release.outputs.runs-on) }}
     # No permissions here: asking for packages: write would fail every caller that does not grant it, image or not. The caller's job grants it.
     outputs:
       name: ${{ steps.image.outputs.name }}
     steps:
       # The released commit, as its tag names it.
+      # An earlier job on an own runner may have left this workspace sparse (another product's job, a sparse checkout).
+      - uses: ElderlyGate/.github/.github/actions/unsparse@main
       - uses: actions/checkout@v5
         with:
           ref: refs/tags/${{ needs.release.outputs.version }}
