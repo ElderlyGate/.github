@@ -65,7 +65,6 @@ Until a product has dropped its file, set `version-file`. Then the pull request 
 |---|---|
 | `templates/release-go.yml` | Go products with goreleaser |
 | `templates/release-library.yml` | A library: tag and notes, no binaries |
-| `templates/release-e-designer.yml` | e-designer: gate is `pnpm check`, `VERSION` checked |
 | `templates/release-docs.yml` | Docs only, like the org constitution: no tests |
 | `templates/ci-go.yml` | A Go product with no `ci.yml` yet |
 | `templates/rule-dates.yml` | Every repository with a constitution: the rule-date check (G-CON-8) |
