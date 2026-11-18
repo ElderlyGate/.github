@@ -32,6 +32,8 @@ jobs:
       - uses: ./.github/actions/image
         with:
           tag: v1.2.3
+          # This repository's own name, .github, is no image name.
+          name: ghcr.io/elderlygate/image-test
           target: run
           version-arg: VERSION
           context: .github/actions/image/testdata
